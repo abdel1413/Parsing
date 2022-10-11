@@ -55,3 +55,15 @@ function parseAply(expr, program) {
   }
   return parseAply(program.slice(1));
 }
+
+//now create a parse function that verifies that
+//it has reached the end of the input string
+//after parsing the expression which gives us the
+//program's data structure
+function parse(program) {
+  let { expr, rest } = ParseExpression(program);
+  if (skipeSpace(rest).length > 0) {
+    throw new TypeError("Unexpected text after program");
+  }
+  return expr;
+}

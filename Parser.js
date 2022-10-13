@@ -88,3 +88,55 @@ function parse(program) {
 }
 
 console.log(parse("+(a, 10)"));
+
+const specialForms = Object.create(null);
+
+//create a  function to run the syntex tree
+function evaluate(expr, scope) {
+  if (expr.type == "value") {
+    return expr.value;
+  } else if (expr.type == "word") {
+    //check if the binding is define in scope
+    if (expr.name in scope) {
+      return scope[expr.name];
+    } else {
+      throw new ReferenceError(`Undefined binging ${expr.name}`);
+    }
+  } else if (expr.type == "apply") {
+    //if the application is special form, we don't EVALUATE anything
+    // we rather pass the argment expression along with the scope
+    let { operator, args } = expr;
+    if ((operator.type = "word" && operator.name in specialForms)) {
+      return specialForms[operator.name](expr.args, scope);
+    } else {
+      //but if it s a normal call, we EVALUATE the operator.Verify if
+      //it is a function and call if with evaluated argments
+      let op = evaluate(operator, scope);
+      if (typeof op === "function") {
+        return op(
+          ...args.map((arg) => {
+            evaluate(arg, scope);
+          })
+        );
+      } else {
+        throw new TypeError("Applying a non-function.");
+      }
+    }
+  }
+}
+
+//add if function to specialForm
+//it two params
+// the first args must have length of 3
+//checks if the first element from args is not false
+//if it so then return evaluated 2nd element and scope
+// if it false, it returns evaluated third element and scope
+specialForms.if = (args, scope) => {
+  if (args.length != 3) {
+    throw new SyntaxError("Wrong number of arg to if");
+  } else if (evaluate(args[0], scope !== false)) {
+    return evaluate(args[1], scope);
+  } else {
+    return evaluate(args[2], scope);
+  }
+};

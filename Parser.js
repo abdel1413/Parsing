@@ -169,4 +169,5 @@ specialForms.define = (args, scope) => {
   }
   let value = evaluate(args[1], scope);
   args[scope[0].name] = value;
+  return value;
 };

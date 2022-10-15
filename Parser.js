@@ -140,3 +140,33 @@ specialForms.if = (args, scope) => {
     return evaluate(args[2], scope);
   }
 };
+
+specialForms.while = (args, scope) => {
+  if (args.length != 2) {
+    throw new SyntaxError("Wrong numbe of args to while");
+  }
+  while (evaluate(args[0] !== false)) {
+    evaluate(args[1], scope);
+  }
+  return false; // returned false bcz undefine doesn't exist in Egg
+};
+
+// do wchich execute all its args
+specialForms.do = (args, scope) => {
+  let value = false;
+  for (let arg in args) {
+    value = evaluate(arg, scope);
+  }
+  return value;
+};
+
+//create a form define expecting 2 argument first is word and
+//second is expression producing a value that is assigned
+// to that word as its seconde arg
+specialForms.define = (args, scope) => {
+  if (args.length != 2 || arg[0].type != "word") {
+    throw new SyntaxError("Incorrect use of define");
+  }
+  let value = evaluate(args[1], scope);
+  args[scope[0].name] = value;
+};

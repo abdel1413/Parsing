@@ -92,6 +92,12 @@ console.log(parse("+(a, 10)"));
 const specialForms = Object.create(null);
 
 //create a  function to run the syntex tree
+/**
+ * 
+ * @param {*} expr 
+ * @param {*} scope 
+ * @returns 
+ 
 function evaluate(expr, scope) {
   if (expr.type == "value") {
     return expr.value;
@@ -124,6 +130,33 @@ function evaluate(expr, scope) {
     }
   }
 }
+*/
+
+// const specialForms = Object.create(null);
+
+function evaluate(expr, scope) {
+  if (expr.type == "value") {
+    return expr.value;
+  } else if (expr.type == "word") {
+    if (expr.name in scope) {
+      return scope[expr.name];
+    } else {
+      throw new ReferenceError(`Undefined binding: ${expr.name}`);
+    }
+  } else if (expr.type == "apply") {
+    let { operator, args } = expr;
+    if (operator.type == "word" && operator.name in specialForms) {
+      return specialForms[operator.name](expr.args, scope);
+    } else {
+      let op = evaluate(operator, scope);
+      if (typeof op == "function") {
+        return op(...args.map((arg) => evaluate(arg, scope)));
+      } else {
+        throw new TypeError("Applying a non-function.");
+      }
+    }
+  }
+}
 
 //add if function to specialForm
 //it two params
@@ -134,7 +167,7 @@ function evaluate(expr, scope) {
 specialForms.if = (args, scope) => {
   if (args.length != 3) {
     throw new SyntaxError("Wrong number of arg to if");
-  } else if (evaluate(args[0], scope !== false)) {
+  } else if (evaluate(args[0], scope) !== false) {
     return evaluate(args[1], scope);
   } else {
     return evaluate(args[2], scope);
@@ -145,7 +178,7 @@ specialForms.while = (args, scope) => {
   if (args.length != 2) {
     throw new SyntaxError("Wrong numbe of args to while");
   }
-  while (evaluate(args[0] !== false)) {
+  while (evaluate(args[0]) !== false) {
     evaluate(args[1], scope);
   }
   return false; // returned false bcz undefine doesn't exist in Egg
@@ -171,3 +204,38 @@ specialForms.define = (args, scope) => {
   args[scope[0].name] = value;
   return value;
 };
+
+//to be able to acces the if form we just defined,
+// we need boolean so let create it and it is our
+//global scope
+
+const topScop = Object.create(null);
+topScop.true = true;
+topScop.false = false;
+
+// we can now negate our boolean value
+
+let prog = parse(`if(true, false, true)`);
+console.log(evaluate(prog, topScop));
+
+//create arthmetic comparison operators to add to the
+//function scope.
+for (let op of ["<", ">", "==", "+", "-", "/", "*"]) {
+  topScop[op] = Function("a, b", `return a ${op} b;`);
+  console.log(topScop[op]);
+}
+
+//printing out function
+topScop.print = (value) => {
+  console.log(value);
+  return value;
+};
+
+//a function to parse a program and run it
+function run(program) {
+  console.log(Object.create(topScop));
+  console.log(parse(program));
+  console.log(evaluate(parse(program)));
+
+  return evaluate(parse(program), Object.create(topScop));
+}

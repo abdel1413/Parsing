@@ -25,9 +25,9 @@ function ParseExpression(program) {
 function skipeSpace(string) {
   let first = string.search(/\S/);
 
-  console.log("first " + first); //0
+  //console.log("first " + first); //0
   if (first == -1) return "";
-  console.log("string.slice(first) ", string.slice(first));
+  //console.log("string.slice(first) ", string.slice(first));
   //string.slice(first)  +(a, 10)
   //string.slice(first)  (a, 10)
   //string.slice(first)  a, 10)
@@ -44,17 +44,17 @@ function skipeSpace(string) {
 // expression to check if it is an application. If so, it
 //parse the parenthesized list of arguments
 function parseAply(expr, program) {
-  console.log("praserapply expr", expr, "prog ", program);
+  //console.log("praserapply expr", expr, "prog ", program);
   // 1 loop: praserapply: expre {type: 'word', name: '+'} name: "+" type: "word" prog  (a, 10)
   //2nd loop: praserapply: expre {type: 'word', name: 'a'} prog  , 10)
   //3rd:praserapply: expre {type: 'value', value: 10} prog  )
   //4th: praserapply: expre {type: 'apply', operator: {…}, args: Array(2)} prog
 
   program = skipeSpace(program);
-  console.log("prog", program); //+(a, 10)
-  console.log("prog[0]", program[0]); //+
+  //console.log("prog", program); //+(a, 10)
+  // console.log("prog[0]", program[0]); //+
   if (program[0] != "(") {
-    console.log("expr: expr, rest: program ", { expr: expr, rest: program });
+    //console.log("expr: expr, rest: program ", { expr: expr, rest: program });
     // 1st loop: expr: expr, rest: program  {expr: {…}, rest: ', 10)'}
     // 2 expr: expr, rest: program  {expr: {…}, rest: ')'}
     // 3 expr: expr, rest: program  {expr: {…}, rest: ''}
@@ -88,8 +88,12 @@ function parse(program) {
 }
 
 console.log(parse("+(a, 10)"));
+// → {type: "apply",
+//    operator: {type: "word", name: "+"},
+//    args: [{type: "word", name: "a"},
+//           {type: "value", value: 10}]}
 
-const specialForms = Object.create(null);
+//const specialForms = Object.create(null);
 
 //create a  function to run the syntex tree
 /**
@@ -132,7 +136,7 @@ function evaluate(expr, scope) {
 }
 */
 
-// const specialForms = Object.create(null);
+const specialForms = Object.create(null);
 
 function evaluate(expr, scope) {
   if (expr.type == "value") {
@@ -187,7 +191,7 @@ specialForms.while = (args, scope) => {
 // do wchich execute all its args
 specialForms.do = (args, scope) => {
   let value = false;
-  for (let arg in args) {
+  for (let arg of args) {
     value = evaluate(arg, scope);
   }
   return value;
@@ -197,11 +201,11 @@ specialForms.do = (args, scope) => {
 //second is expression producing a value that is assigned
 // to that word as its seconde arg
 specialForms.define = (args, scope) => {
-  if (args.length != 2 || arg[0].type != "word") {
+  if (args.length != 2 || args[0].type != "word") {
     throw new SyntaxError("Incorrect use of define");
   }
   let value = evaluate(args[1], scope);
-  args[scope[0].name] = value;
+  scope[args[0].name] = value;
   return value;
 };
 
@@ -209,33 +213,90 @@ specialForms.define = (args, scope) => {
 // we need boolean so let create it and it is our
 //global scope
 
-const topScop = Object.create(null);
-topScop.true = true;
-topScop.false = false;
+const topScope = Object.create(null);
+topScope.true = true;
+topScope.false = false;
 
 // we can now negate our boolean value
 
-let prog = parse(`if(true, false, true)`);
-console.log(evaluate(prog, topScop));
+let prog = parse(`if(true,false,true)`);
+console.log(evaluate(prog, topScope)); //false
 
 //create arthmetic comparison operators to add to the
 //function scope.
 for (let op of ["<", ">", "==", "+", "-", "/", "*"]) {
-  topScop[op] = Function("a, b", `return a ${op} b;`);
-  console.log(topScop[op]);
+  topScope[op] = Function("a, b", `return a ${op} b;`);
+  //   console.log(topScop[op]);
 }
 
 //printing out function
-topScop.print = (value) => {
-  console.log(value);
+topScope.print = (value) => {
   return value;
 };
 
 //a function to parse a program and run it
 function run(program) {
-  console.log(Object.create(topScop));
-  console.log(parse(program));
-  console.log(evaluate(parse(program)));
-
-  return evaluate(parse(program), Object.create(topScop));
+  return evaluate(parse(program), Object.create(topScope));
 }
+
+run(`
+do(define(total, 0),
+   define(count, 1),
+   while(<(count, 11),
+         do(define(total, +(total, count)),
+            define(count, +(count, 1)))),
+   print(total))
+`);
+
+//=>55
+
+//create a fun construct which treat its last argment as
+// a function's body and uses all argument before that
+//as  the names of function's parameters.
+
+specialForms.fun = (args, scope) => {
+  if (!args.length) {
+    throw new SyntaxError(" Function must have body");
+  }
+  let body = args[args.length - 1];
+  let params = args.slice(0, args.length - 1).map((expr) => {
+    if (expr.type != "word") {
+      throw new SyntaxError("parametor must be a word");
+    }
+    return expr.name;
+  });
+  return function () {
+    if (arguments.length != params.length) {
+      throw new TypeError("Wrong number of arguments");
+    }
+
+    //create a local scope and add arguments biding
+    //to it. It then evaluate the function  body in the scope
+    //and return a resutl.
+    let locatScope = Object.create(scope);
+    for (let i = 0; i < arguments.length; i++) {
+      locatScope[params[i]] = arguments[i];
+    }
+    return evaluate(body, locatScope);
+  };
+};
+
+console.log(
+  run(`do(define(PlusOne,
+     fun(a, +(a,1))), print(PlusOne(10)))`)
+); // 11
+
+run(`
+     do(define(pow, fun(base , exp,
+        if(==(exp, 0),
+        1,
+        *(base, pow(base, -(exp, 1)))))),
+        print(pow(2, 10)))`);
+
+// run(`
+// do(define(pow, fun(base, exp,
+//      if(==(exp, 0),
+//         1,
+//         *(base, pow(base, -(exp, 1)))))),
+//    print(pow(2, 10)))
+// `);

@@ -168,6 +168,7 @@ function evaluate(expr, scope) {
 //checks if the first element from args is not false
 //if it so then return evaluated 2nd element and scope
 // if it false, it returns evaluated third element and scope
+
 specialForms.if = (args, scope) => {
   if (args.length != 3) {
     throw new SyntaxError("Wrong number of arg to if");
@@ -286,12 +287,12 @@ console.log(
      fun(a, +(a,1))), print(PlusOne(10)))`)
 ); // 11
 
-run(`
-     do(define(pow, fun(base , exp,
-        if(==(exp, 0),
-        1,
-        *(base, pow(base, -(exp, 1)))))),
-        print(pow(2, 10)))`);
+// run(`
+//      do(define(pow, fun(base , exp,
+//         if(==(exp, 0),
+//         1,
+//         *(base, pow(base, -(exp, 1)))))),
+//         print(pow(2, 10)))`);
 
 // run(`
 // do(define(pow, fun(base, exp,
@@ -300,3 +301,8 @@ run(`
 //         *(base, pow(base, -(exp, 1)))))),
 //    print(pow(2, 10)))
 // `);
+
+run(`
+do(define(f, fun(a, fun(b, +(a, b)))),
+   print(f(4)(5)))
+`);
